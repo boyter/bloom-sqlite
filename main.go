@@ -6,23 +6,28 @@ import (
 	"fmt"
 	"math/rand"
 	_ "modernc.org/sqlite"
+	"os"
 	"runtime"
 	"strings"
 	"time"
 )
 
 func main() {
-	//db, _ := connectSqliteDb("bloom")
-	db, _ := connectSqliteDb(":memory:")
+	dbName := "bloom" // change to :memory: for memory test
+	db, _ := connectSqliteDb(dbName)
 	db.SetMaxOpenConns(runtime.NumCPU())
 	_, _ = db.Exec(`create table if not exists bloom (id integer constraint data_pk primary key autoincrement, num integer not null) strict;`)
 
-	populate(db)
-	getLength(db)
+	if dbName == ":memory:" {
+		populate(db)
+	} else {
+		if _, err := os.Stat(fmt.Sprintf("%v.db", dbName)); err != nil {
+			populate(db)
+		}
+	}
 
-	//f, _ := os.Create("profile.pprof")
-	//pprof.StartCPUProfile(f)
-	//defer pprof.StopCPUProfile()
+	// cache the length
+	_ = getLength(db)
 
 	fmt.Println()
 
@@ -56,7 +61,6 @@ func dbSearch(queryBits []uint64, db *sql.DB) []int {
 	for i := 0; i < bloomLength; i += BloomSize {
 		// preload the res with the result of the first queryBit and if it's not 0 then we continue
 		// if it is 0 it means nothing can be a match so we don't need to do anything
-		//res = bloomFilter[queryBits[0]+uint64(i)]
 		res = getRowAt(db, queryBits[0]+uint64(i)) // have to do this first to ensure res has something before we &
 
 		// we don't need to look at the first queryBit anymore so start at one
