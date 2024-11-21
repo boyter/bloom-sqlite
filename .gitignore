@@ -1,0 +1,5 @@
+.idea
+bloom.db
+bloom.db-wal
+bloom.db-shm
+profile.pprof
